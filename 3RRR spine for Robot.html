@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quadruped Spine Analysis / 四足机器人脊柱分析</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+        
+        body { font-family: 'Inter', 'Noto Sans SC', sans-serif; background-color: #fdfbf7; color: #1f2937; transition: all 0.3s; }
+        .chart-container { 
+            position: relative; 
+            width: 100%; 
+            max-width: 600px; 
+            margin-left: auto; 
+            margin-right: auto; 
+            height: 300px; 
+            max-height: 400px; 
+        }
+        .figure-placeholder {
+            background-color: #f3f4f6;
+            border: 2px dashed #d1d5db;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #6b7280;
+            transition: all 0.3s;
+        }
+        .figure-placeholder:hover {
+            border-color: #d97706;
+            background-color: #fffbeb;
+            color: #d97706;
+        }
+        .card-hover { transition: all 0.3s ease; }
+        .card-hover:hover { transform: translateY(-4px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); }
+    </style>
+    <!-- 
+        Application Structure Plan:
+        1. Header with Language Toggle.
+        2. Intro Section.
+        3. Simulator (Comparison of architectures) + Figure 1 (Mechanism).
+        4. Cat Righting Reflex (Theory) + Figure 2 (Kane's Model).
+        5. Novelty Analysis + Figure 3 (Serial vs Parallel).
+        6. References.
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used directly. NO Mermaid JS used. Visual placeholders used for images. -->
+</head>
+<body class="bg-[#fdfbf7] text-gray-800 antialiased selection:bg-amber-100 selection:text-amber-900">
+
+    <!-- Header -->
+    <header class="w-full bg-white shadow-sm border-b border-stone-200 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <span class="text-2xl font-bold text-gray-900 tracking-tight">Robo<span class="text-amber-600">Spine</span> Analyze</span>
+            </div>
+            <div class="flex items-center gap-6">
+                <nav class="hidden md:flex space-x-6 text-sm font-medium">
+                    <a href="#simulator" class="hover:text-amber-600 transition-colors" data-i18n="nav_sim">核心仿真</a>
+                    <a href="#cat-reflex" class="hover:text-amber-600 transition-colors" data-i18n="nav_cat">猫旋理论</a>
+                    <a href="#analysis" class="hover:text-amber-600 transition-colors" data-i18n="nav_novelty">新意分析</a>
+                    <a href="#references" class="hover:text-amber-600 transition-colors" data-i18n="nav_ref">参考文献</a>
+                </nav>
+                <button onclick="toggleLanguage()" class="flex items-center gap-1 px-3 py-1 rounded-full border border-stone-300 hover:border-amber-500 hover:text-amber-600 transition-colors text-xs font-bold uppercase tracking-wide">
+                    <span id="lang-btn-text">EN</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" />
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-16">
+
+        <!-- Intro -->
+        <section class="text-center max-w-4xl mx-auto space-y-6">
+            <h1 class="text-3xl md:text-5xl font-bold text-gray-900 leading-tight">
+                <span data-i18n="title_main">从猫旋现象到并联腰部</span><br>
+                <span class="text-amber-600 text-2xl md:text-4xl block mt-2" data-i18n="title_sub">四足机器人三自由度优化研究</span>
+            </h1>
+            <p class="text-lg text-gray-600 leading-relaxed max-w-2xl mx-auto" data-i18n="intro_text">
+                本研究旨在通过引入“扭转(Roll)”自由度，使机器人具备类似猫在空中零角动量翻转的能力。
+            </p>
+        </section>
+
+        <!-- Section 1: The Simulator -->
+        <section id="simulator" class="bg-white rounded-2xl shadow-sm border border-stone-200 overflow-hidden">
+            <div class="p-6 md:p-8 border-b border-stone-100">
+                <div class="mb-6">
+                    <h2 class="text-2xl font-bold" data-i18n="sim_title">1. 架构性能对比仿真</h2>
+                    <p class="text-gray-500 text-sm" data-i18n="sim_subtitle">选择架构，查看其是否支持猫旋所需的复杂运动。</p>
+                </div>
+                
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <!-- Controls -->
+                    <div class="space-y-4">
+                        <button onclick="updateSimulation('rigid')" id="btn-rigid" class="w-full p-4 rounded-xl border text-left transition-all bg-stone-50 border-stone-200 hover:border-stone-300">
+                            <div class="font-bold text-gray-700" data-i18n="btn_rigid">传统刚性躯干</div>
+                            <div class="text-xs text-gray-400 mt-1">Roll: 0 | Pitch: 0 | Yaw: 0</div>
+                        </button>
+
+                        <button onclick="updateSimulation('serial')" id="btn-serial" class="w-full p-4 rounded-xl border text-left transition-all bg-stone-50 border-stone-200 hover:border-stone-300">
+                            <div class="font-bold text-blue-700" data-i18n="btn_serial">现有两自由度腰部</div>
+                            <div class="text-xs text-blue-400 mt-1">Roll: 0 | Pitch: √ | Yaw: √</div>
+                        </button>
+
+                        <button onclick="updateSimulation('parallel')" id="btn-parallel" class="w-full p-4 rounded-xl border-2 text-left transition-all ring-2 ring-amber-500 bg-amber-50 border-amber-500 shadow-md">
+                            <div class="font-bold text-amber-900" data-i18n="btn_parallel">您的提案：三自由度并联</div>
+                            <div class="text-xs text-amber-600 mt-1">Roll: √ | Pitch: √ | Yaw: √</div>
+                            <div class="mt-2 text-xs font-bold bg-amber-200 text-amber-800 inline-block px-2 py-1 rounded" data-i18n="tag_unique">唯一支持完整猫旋</div>
+                        </button>
+
+                        <div class="bg-stone-50 p-4 rounded-xl border border-stone-200 text-sm mt-4">
+                            <h3 class="font-bold text-gray-700 mb-2" data-i18n="analysis_title">当前配置分析</h3>
+                            <p id="config-desc" class="text-gray-600 leading-relaxed"></p>
+                        </div>
+                    </div>
+
+                    <!-- Visualization -->
+                    <div class="lg:col-span-2 flex flex-col gap-6">
+                        <!-- Radar Chart -->
+                        <div class="bg-stone-50 rounded-xl p-4 border border-stone-100 flex-1">
+                            <div class="chart-container">
+                                <canvas id="radarChart"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- Image Reference Block 1 -->
+                        <figure class="w-full">
+                            <div class="figure-placeholder h-48 w-full rounded-lg">
+                                <span class="text-4xl mb-2">⚙️</span>
+                                <span class="font-bold text-sm text-gray-500"></span>
+                                <span class="text-xs text-gray-400 mt-1">Suggested: Schematic of 3-RRR Structure</span>
+                            </div>
+                            <figcaption class="text-center text-xs text-gray-500 mt-2 font-medium">
+                                <span data-i18n="fig_1">Figure 1: 3-RRR 球面并联机构运动学示意图</span>
+                            </figcaption>
+                        </figure>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 2: Cat Righting Reflex -->
+        <section id="cat-reflex" class="bg-gradient-to-br from-amber-50 to-white rounded-2xl shadow-md border border-amber-100 overflow-hidden">
+            <div class="p-6 md:p-8">
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="bg-amber-600 text-white p-2 rounded-lg font-bold text-xl" data-i18n="theory_badge">核心理论</div>
+                    <div>
+                        <h2 class="text-2xl font-bold text-gray-900" data-i18n="cat_title">猫旋现象与零角动量翻转</h2>
+                        <p class="text-amber-800 text-sm" data-i18n="cat_subtitle">Kane动力学方程证明：空中翻身需要“脊柱弯曲”与“脊柱扭转”的非完整约束控制。</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-10">
+                    <!-- Theory Explanation & Image -->
+                    <div class="space-y-6">
+                        <p class="text-gray-700 text-justify leading-relaxed" data-i18n="cat_desc">
+                            猫在下落时，通过守恒角动量定律（净角动量为零）实现翻身。这并不是简单的“空中游泳”，而是一个精密的分阶段机械过程。如果不具备腰部扭转(Roll)自由度，机器人无法利用前后半身的惯量差来产生旋转。
+                        </p>
+                        
+                        <!-- Image Reference Block 2 -->
+                        <figure class="w-full">
+                            <div class="figure-placeholder h-40 w-full rounded-lg bg-white border-amber-200 border-dashed">
+                                <span class="text-4xl mb-2">🐈</span>
+                                <span class="font-bold text-sm text-gray-500"></span>
+                                <span class="text-xs text-gray-400 mt-1">Suggested: Kane's Two-Body Model Diagram</span>
+                            </div>
+                            <figcaption class="text-center text-xs text-gray-500 mt-2 font-medium">
+                                <span data-i18n="fig_2">Figure 2: Kane动力学猫旋模型 (Kane's Cat)</span>
+                            </figcaption>
+                        </figure>
+
+                        <div class="bg-white p-4 rounded-xl border border-amber-200 shadow-sm">
+                            <h3 class="font-bold text-gray-800 mb-3 border-b border-gray-100 pb-2" data-i18n="steps_title">关键步骤分解 (Kane's Method)</h3>
+                            <ul class="space-y-4 text-sm">
+                                <li class="flex gap-3">
+                                    <span class="flex-shrink-0 w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center font-bold text-gray-600">1</span>
+                                    <div>
+                                        <span class="font-bold block text-gray-900" data-i18n="step1_title">脊柱弯曲 (Pitch Activation)</span>
+                                        <span class="text-gray-500" data-i18n="step1_desc">猫首先收缩腹肌，使前半身和后半身成V字形。这是前提条件。</span>
+                                    </div>
+                                </li>
+                                <li class="flex gap-3">
+                                    <span class="flex-shrink-0 w-6 h-6 rounded-full bg-amber-500 flex items-center justify-center font-bold text-white">2</span>
+                                    <div>
+                                        <span class="font-bold block text-amber-700" data-i18n="step2_title">差动扭转 (Active Roll)</span>
+                                        <span class="text-gray-600" data-i18n="step2_desc">通过扭转脊柱，同时改变前后腿惯量，实现半身快速旋转。</span>
+                                    </div>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- Interactive Chart -->
+                    <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-inner flex flex-col justify-between">
+                        <div>
+                            <div class="mb-4">
+                                <h3 class="font-bold text-gray-800" data-i18n="chart_cat_title">脊柱关节协同控制图谱</h3>
+                                <p class="text-xs text-gray-500" data-i18n="chart_cat_sub">展示了完成一次猫旋所需的关节相位关系。</p>
+                            </div>
+                            <div class="chart-container h-56">
+                                <canvas id="catReflexChart"></canvas>
+                            </div>
+                        </div>
+                        <p class="mt-3 text-xs text-center text-red-500 font-semibold border-t pt-2 border-gray-100" data-i18n="chart_cat_conclusion">
+                            结论：若没有红色曲线(Roll)，机器人无法完成空中姿态重构。
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 3: Novelty & Feasibility -->
+        <section id="analysis" class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-stone-200 flex flex-col">
+                <h2 class="text-xl font-bold mb-4 flex items-center gap-2">
+                    <span class="w-1 h-6 bg-blue-500 rounded-full"></span>
+                    <span data-i18n="novelty_title">新意分析：3-RRR 并联机构</span>
+                </h2>
+                <div class="space-y-4 text-sm text-gray-600 flex-grow">
+                    <p data-i18n="novelty_p1">
+                        <strong>现状痛点：</strong> 现有的仿生机器人要么是刚性躯干，要么是简单的串联关节。串联关节在进行猫旋这种高爆发动作时，电机直接承重，容易损坏。
+                    </p>
+                    <p data-i18n="novelty_p2">
+                        <strong>您的创新：</strong> 提出利用 <strong>3-RRR 并联机构</strong> 作为腰部。电机安装在基座，减小了运动惯量。
+                    </p>
+                </div>
+                <!-- Image Reference Block 3 -->
+                <figure class="w-full mt-6">
+                    <div class="figure-placeholder h-32 w-full rounded-lg">
+                        <span class="text-2xl mb-1">⚖️</span>
+                        <span class="font-bold text-xs text-gray-500"></span>
+                    </div>
+                    <figcaption class="text-center text-xs text-gray-500 mt-2 font-medium">
+                        <span data-i18n="fig_3">Figure 3: 串联(Serial)与并联(Parallel)机构刚度对比</span>
+                    </figcaption>
+                </figure>
+            </div>
+
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-stone-200">
+                <h2 class="text-xl font-bold mb-4 flex items-center gap-2">
+                    <span class="w-1 h-6 bg-green-500 rounded-full"></span>
+                    <span data-i18n="suggestion_title">研究优化建议</span>
+                </h2>
+                <div class="space-y-4 text-sm text-gray-600">
+                    <div class="p-3 bg-green-50 rounded-lg border border-green-100">
+                        <strong class="text-green-800 block mb-1" data-i18n="sugg1_title">建议 1：明确“非完整约束”控制策略</strong>
+                        <p data-i18n="sugg1_desc">强调3自由度腰部是为了利用非完整约束（Non-holonomic constraints）进行姿态控制。</p>
+                    </div>
+                    <div class="p-3 bg-stone-50 rounded-lg border border-stone-100">
+                        <strong class="text-gray-800 block mb-1" data-i18n="sugg2_title">建议 2：对比“跌落恢复”实验</strong>
+                        <p data-i18n="sugg2_desc">设计仿真实验：让机器人背部朝下坠落。对比“有Roll”和“无Roll”情况下的落地姿态。</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 4: References -->
+        <section id="references" class="space-y-6">
+            <div class="border-l-4 border-stone-800 pl-4">
+                <h2 class="text-2xl font-bold text-gray-900" data-i18n="ref_title">学术基石与参考文献库</h2>
+                <p class="text-gray-500" data-i18n="ref_subtitle">支持研究的三大理论支柱：动力学、并联机构学、仿生学。</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Ref 1 -->
+                <div class="bg-white p-6 rounded-xl border border-stone-200 card-hover flex flex-col justify-between">
+                    <div>
+                        <span class="inline-block px-2 py-1 bg-stone-100 text-stone-600 text-xs font-bold rounded mb-2" data-i18n="tag_theory">核心动力学理论</span>
+                        <h3 class="font-bold text-gray-900 mb-2">A dynamical explanation of the falling cat phenomenon</h3>
+                        <p class="text-xs text-gray-500 italic mb-3">T.R. Kane & M.P. Scher (1969)</p>
+                        <p class="text-sm text-gray-600" data-i18n="ref1_desc">Kane提出了著名的Kane方程，证明了在零角动量下，通过形状变化可以实现整体姿态的重构。</p>
+                    </div>
+                </div>
+                <!-- Ref 2 -->
+                <div class="bg-white p-6 rounded-xl border border-stone-200 card-hover flex flex-col justify-between">
+                    <div>
+                        <span class="inline-block px-2 py-1 bg-stone-100 text-stone-600 text-xs font-bold rounded mb-2" data-i18n="tag_mech">机构学基础</span>
+                        <h3 class="font-bold text-gray-900 mb-2">Design and performance analysis of a 3-RRR spherical parallel manipulator</h3>
+                        <p class="text-xs text-gray-500 italic mb-3">Gosselin & Angeles (1989)</p>
+                        <p class="text-sm text-gray-600" data-i18n="ref2_desc">关于3-RRR球面并联机构的经典分析。详细描述了其逆运动学和刚度特性。</p>
+                    </div>
+                </div>
+                <!-- Ref 3 -->
+                <div class="bg-white p-6 rounded-xl border border-stone-200 card-hover flex flex-col justify-between">
+                    <div>
+                        <span class="inline-block px-2 py-1 bg-stone-100 text-stone-600 text-xs font-bold rounded mb-2" data-i18n="tag_bionic">仿生原型</span>
+                        <h3 class="font-bold text-gray-900 mb-2">Design Principles for Energy-Efficient Legged Locomotion...</h3>
+                        <p class="text-xs text-gray-500 italic mb-3">S. Seok, et al. (MIT Cheetah, 2015)</p>
+                        <p class="text-sm text-gray-600" data-i18n="ref3_desc">详细阐述了脊柱设计对奔跑储能和步幅的影响。</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <footer class="border-t border-stone-200 pt-8 pb-12 text-center text-sm text-gray-500">
+            <p data-i18n="footer">基于您的提案生成的交互式研究分析报告与文献库。</p>
+        </footer>
+
+    </main>
+
+    <script>
+        // --- Translations ---
+        const translations = {
+            zh: {
+                nav_sim: "核心仿真", nav_cat: "猫旋理论", nav_novelty: "新意分析", nav_ref: "参考文献",
+                title_main: "从猫旋现象到并联腰部", title_sub: "四足机器人三自由度优化研究",
+                intro_text: "本研究旨在通过引入“扭转(Roll)”自由度，使机器人具备类似猫在空中零角动量翻转的能力。",
+                sim_title: "1. 架构性能对比仿真", sim_subtitle: "选择架构，查看其是否支持猫旋所需的复杂运动。",
+                btn_rigid: "传统刚性躯干", btn_serial: "现有两自由度腰部", btn_parallel: "您的提案：三自由度并联",
+                tag_unique: "唯一支持完整猫旋",
+                analysis_title: "当前配置分析",
+                fig_1: "Figure 1: 3-RRR 球面并联机构运动学示意图",
+                theory_badge: "核心理论", cat_title: "猫旋现象与零角动量翻转", cat_subtitle: "Kane动力学方程证明：空中翻身需要“脊柱弯曲”与“脊柱扭转”的非完整约束控制。",
+                cat_desc: "猫在下落时，通过守恒角动量定律（净角动量为零）实现翻身。这并不是简单的“空中游泳”，而是一个精密的分阶段机械过程。如果不具备腰部扭转(Roll)自由度，机器人无法利用前后半身的惯量差来产生旋转。",
+                fig_2: "Figure 2: Kane动力学猫旋模型 (Kane's Cat)",
+                steps_title: "关键步骤分解 (Kane's Method)", step1_title: "脊柱弯曲 (Pitch Activation)", step1_desc: "猫首先收缩腹肌，使前半身和后半身成V字形。这是前提条件。", step2_title: "差动扭转 (Active Roll)", step2_desc: "通过扭转脊柱，同时改变前后腿惯量，实现半身快速旋转。",
+                chart_cat_title: "脊柱关节协同控制图谱", chart_cat_sub: "展示了完成一次猫旋所需的关节相位关系。", chart_cat_conclusion: "结论：若没有红色曲线(Roll)，机器人无法完成空中姿态重构。",
+                novelty_title: "新意分析：3-RRR 并联机构", novelty_p1: "<strong>现状痛点：</strong> 现有的仿生机器人要么是刚性躯干，要么是简单的串联关节。串联关节在进行猫旋这种高爆发动作时，电机直接承重，容易损坏。", novelty_p2: "<strong>您的创新：</strong> 提出利用 <strong>3-RRR 并联机构</strong> 作为腰部。电机安装在基座，减小了运动惯量。",
+                fig_3: "Figure 3: 串联(Serial)与并联(Parallel)机构刚度对比",
+                suggestion_title: "研究优化建议", sugg1_title: "建议 1：明确“非完整约束”控制策略", sugg1_desc: "强调3自由度腰部是为了利用非完整约束（Non-holonomic constraints）进行姿态控制。", sugg2_title: "建议 2：对比“跌落恢复”实验", sugg2_desc: "设计仿真实验：让机器人背部朝下坠落。对比“有Roll”和“无Roll”情况下的落地姿态。",
+                ref_title: "学术基石与参考文献库", ref_subtitle: "支持研究的三大理论支柱：动力学、并联机构学、仿生学。",
+                tag_theory: "核心动力学理论", ref1_desc: "Kane提出了著名的Kane方程，证明了在零角动量下，通过形状变化可以实现整体姿态的重构。",
+                tag_mech: "机构学基础", ref2_desc: "关于3-RRR球面并联机构的经典分析。详细描述了其逆运动学和刚度特性。",
+                tag_bionic: "仿生原型", ref3_desc: "详细阐述了脊柱设计对奔跑储能和步幅的影响。",
+                footer: "基于您的提案生成的交互式研究分析报告与文献库。",
+                radar_labels: ['灵活性', '结构刚度', '控制复杂度', '空中姿态能力', '仿生拟真度'],
+                chart_pitch: "脊柱弯曲 (Pitch)", chart_roll: "脊柱扭转 (Roll)",
+                config_rigid_desc: "刚性躯干完全无法实现猫旋。空中姿态不可控，落地大概率背部着地。",
+                config_serial_desc: "现有两自由度（俯仰+偏航）腰部可以弯曲，但缺乏“扭转”维度。虽然能做V字弯曲，但无法产生导致翻身的角动量转移。",
+                config_parallel_desc: "三自由度并联腰部支持 Pitch+Roll 复合运动。3-RRR 结构的高带宽响应能够跟上猫旋所需的毫秒级姿态调整。"
+            },
+            en: {
+                nav_sim: "Simulation", nav_cat: "Cat Reflex", nav_novelty: "Novelty", nav_ref: "References",
+                title_main: "From Cat Reflex to Parallel Waist", title_sub: "3-DOF Optimization for Quadruped Robots",
+                intro_text: "This study aims to enable zero-angular-momentum aerial turning, similar to a falling cat, by introducing a 'Roll' degree of freedom.",
+                sim_title: "1. Architecture Comparison Simulation", sim_subtitle: "Select architecture to test capabilities for cat reflex.",
+                btn_rigid: "Rigid Trunk (Traditional)", btn_serial: "2-DOF Waist (Existing)", btn_parallel: "3-DOF Parallel (Proposed)",
+                tag_unique: "Enables Cat Reflex",
+                analysis_title: "Configuration Analysis",
+                fig_1: "Figure 1: 3-RRR Spherical Parallel Mechanism Kinematics",
+                theory_badge: "Core Theory", cat_title: "Cat Righting Reflex & Zero Momentum Turn", cat_subtitle: "Kane's equations prove aerial turning requires non-holonomic control of Spine Pitch & Roll.",
+                cat_desc: "Cats achieve aerial turning via conservation of angular momentum (net zero). This is a precise mechanical process involving shape change. Without 'Roll' DOF, the robot cannot utilize inertia difference between fore and hind bodies.",
+                fig_2: "Figure 2: Kane's Falling Cat Model",
+                steps_title: "Key Phase Breakdown (Kane's Method)", step1_title: "Spine Bending (Pitch)", step1_desc: "First, abdominal contraction creates a V-shape. This is a prerequisite.", step2_title: "Differential Twisting (Roll)", step2_desc: "Twisting the spine while changing fore/hind leg inertia creates rapid body rotation.",
+                chart_cat_title: "Spine Joint Coordination Map", chart_cat_sub: "Shows phase relationship required for one cat reflex cycle.", chart_cat_conclusion: "Conclusion: Without the Red Curve (Roll), aerial reorientation is impossible.",
+                novelty_title: "Novelty Analysis: 3-RRR Parallel Mechanism", novelty_p1: "<strong>Current Issues:</strong> Existing robots are either rigid or use simple serial joints. Serial joints are prone to damage and have high inertia during high-dynamic moves like the cat reflex.", novelty_p2: "<strong>Your Innovation:</strong> Utilizing a <strong>3-RRR Parallel Mechanism</strong>. Base-mounted motors reduce moving inertia.",
+                fig_3: "Figure 3: Stiffness Comparison: Serial vs Parallel",
+                suggestion_title: "Research Suggestions", sugg1_title: "Tip 1: Emphasize 'Non-holonomic' Control", sugg1_desc: "Highlight that the 3-DOF waist is for non-holonomic posture control, not just range of motion.", sugg2_title: "Tip 2: 'Drop Recovery' Experiment", sugg2_desc: "Simulate a back-down drop test. Compare landing posture with and without Roll DOF.",
+                ref_title: "Academic References", ref_subtitle: "Three pillars: Dynamics, Mechanism Theory, Bionics.",
+                tag_theory: "Dynamics Theory", ref1_desc: "Kane proposed the famous Kane equations, proving shape change enables posture reconfiguration under zero angular momentum.",
+                tag_mech: "Mechanism Theory", ref2_desc: "Classic analysis of 3-RRR spherical parallel manipulator. Details kinematics and stiffness.",
+                tag_bionic: "Bionic Prototype", ref3_desc: "Details spine design principles for energy storage and stride length in MIT Cheetah.",
+                footer: "Interactive research analysis based on your proposal.",
+                radar_labels: ['Agility', 'Stiffness', 'Complexity', 'Aerial Control', 'Biomimetic'],
+                chart_pitch: "Spine Pitch", chart_roll: "Spine Roll",
+                config_rigid_desc: "Rigid trunk cannot achieve cat reflex. Aerial posture is uncontrollable; likely to land on back.",
+                config_serial_desc: "Existing 2-DOF (Pitch+Yaw) can bend, but lacks 'Twist'. It can form a V-shape but cannot transfer angular momentum for flipping.",
+                config_parallel_desc: "3-DOF Parallel waist supports complex Pitch+Roll. High bandwidth of 3-RRR structure matches the millisecond-level response needed."
+            }
+        };
+
+        // --- State ---
+        let currentLang = 'zh';
+        let currentConfig = 'parallel';
+        let radarChart, catChart;
+
+        // --- Initialization ---
+        window.addEventListener('DOMContentLoaded', () => {
+            initRadarChart();
+            initCatReflexChart();
+            updateSimulation('parallel');
+            updateLanguageUI();
+        });
+
+        // --- Logic ---
+        function toggleLanguage() {
+            currentLang = currentLang === 'zh' ? 'en' : 'zh';
+            updateLanguageUI();
+            updateCharts(); // Refresh chart labels
+            updateSimulation(currentConfig); // Refresh dynamic text
+        }
+
+        function updateLanguageUI() {
+            document.getElementById('lang-btn-text').innerText = currentLang === 'zh' ? 'EN' : '中';
+            
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                if (translations[currentLang][key]) {
+                    el.innerHTML = translations[currentLang][key]; // innerHTML to support <strong> tags
+                }
+            });
+        }
+
+        function updateSimulation(type) {
+            currentConfig = type;
+            
+            // Buttons Styling
+            ['rigid', 'serial', 'parallel'].forEach(key => {
+                const btn = document.getElementById(`btn-${key}`);
+                const isSelected = key === type;
+                btn.className = isSelected 
+                    ? `w-full p-4 rounded-xl border-2 text-left transition-all ring-2 ring-amber-500 bg-amber-50 border-amber-500 shadow-md transform scale-[1.02]`
+                    : `w-full p-4 rounded-xl border text-left transition-all bg-stone-50 border-stone-200 hover:border-stone-300 opacity-70 hover:opacity-100`;
+            });
+
+            // Dynamic Description Text
+            const descKey = `config_${type}_desc`;
+            document.getElementById('config-desc').innerText = translations[currentLang][descKey];
+
+            // Chart Data
+            updateRadarData(type);
+        }
+
+        const configData = {
+            rigid: { metrics: [10, 90, 20, 10, 5], style: { border: '#9ca3af', bg: 'rgba(156, 163, 175, 0.2)' } },
+            serial: { metrics: [40, 60, 50, 40, 50], style: { border: '#3b82f6', bg: 'rgba(59, 130, 246, 0.2)' } },
+            parallel: { metrics: [95, 85, 80, 95, 95], style: { border: '#d97706', bg: 'rgba(217, 119, 6, 0.2)' } }
+        };
+
+        function initRadarChart() {
+            const ctx = document.getElementById('radarChart').getContext('2d');
+            radarChart = new Chart(ctx, {
+                type: 'radar',
+                data: {
+                    labels: translations[currentLang].radar_labels,
+                    datasets: []
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        r: {
+                            angleLines: { color: '#e5e7eb' },
+                            grid: { color: '#e5e7eb' },
+                            pointLabels: { font: { size: 12 }, color: '#4b5563' },
+                            suggestedMin: 0, suggestedMax: 100
+                        }
+                    },
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
+
+        function updateRadarData(type) {
+            radarChart.data.datasets = [{
+                label: 'Performance',
+                data: configData[type].metrics,
+                borderColor: configData[type].style.border,
+                backgroundColor: configData[type].style.bg,
+                borderWidth: 3,
+                pointBackgroundColor: '#fff'
+            }];
+            radarChart.update();
+        }
+
+        function initCatReflexChart() {
+            const ctx = document.getElementById('catReflexChart').getContext('2d');
+            const labels = Array.from({length: 100}, (_, i) => i);
+            const pitchData = labels.map(i => Math.sin(i * 0.0314) * 80);
+            const rollData = labels.map(i => (i > 20 && i < 80) ? Math.sin((i - 20) * 0.05) * 90 : 0);
+
+            catChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        { label: translations[currentLang].chart_pitch, data: pitchData, borderColor: '#3b82f6', borderWidth: 2, tension: 0.4, pointRadius: 0 },
+                        { label: translations[currentLang].chart_roll, data: rollData, borderColor: '#f59e0b', borderWidth: 3, borderDash: [5, 5], tension: 0.4, pointRadius: 0, fill: true, backgroundColor: 'rgba(245, 158, 11, 0.1)' }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: { legend: { display: true, position: 'bottom' } },
+                    scales: {
+                        x: { display: false },
+                        y: { display: true, grid: { color: '#f3f4f6' } }
+                    }
+                }
+            });
+        }
+
+        function updateCharts() {
+            // Update Radar Labels
+            radarChart.data.labels = translations[currentLang].radar_labels;
+            radarChart.update();
+
+            // Update Cat Chart Legend
+            catChart.data.datasets[0].label = translations[currentLang].chart_pitch;
+            catChart.data.datasets[1].label = translations[currentLang].chart_roll;
+            catChart.update();
+        }
+
+    </script>
+</body>
+</html>
